@@ -1,0 +1,18 @@
+anti_bot:
+  target_url: "https://www.nowsecure.nl/"
+
+login:
+  valid_user:
+    username: "tomsmith"
+    password: "SuperSecretPassword!"
+  invalid_user:
+    username: "invalid"
+    password: "invalid"
+
+ecshop:
+  default_user:
+    username: "test"
+    password: "123456"
+  default_search:
+    keyword: "钻石"
+    goods_id: "141"

@@ -1,0 +1,16 @@
+project:
+  name: "seleniumbase-automation-framework"
+  screenshot_dir: "artifacts/screenshots"
+  # 失败时是否自动截图（true/false）；也可用环境变量 SCREENSHOT_ON_FAILURE 覆盖
+  screenshot_on_failure: false
+  # 测试报告默认开关（true/false）
+  report_enabled: false
+  report_dir: "reports"
+
+environments:
+  default:
+    base_url: "http://192.168.47.129"
+    timeout: 10
+  staging:
+    base_url: "http://192.168.47.129"
+    timeout: 15
