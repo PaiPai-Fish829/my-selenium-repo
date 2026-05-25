@@ -1,16 +1,17 @@
-# SeleniumBase 自动化测试框架（ECShop）
+# 自动化测试框架（UI + API）
 
-基于 `SeleniumBase + Pytest + YAML` 的 UI 自动化测试项目，支持：
+本仓库基于 `Pytest + SeleniumBase + Requests + YAML`，支持：
 
-- Page Object 模式
-- YAML 参数化测试
-- 自定义断言封装
-- 失败自动截图
-- 可选测试报告（HTML / Markdown / Allure）
+- UI 自动化测试（SeleniumBase）
+- API 接口测试（Requests）
+- YAML 参数化用例
+- UI/API 断言分层
+- 可选报告（HTML / Markdown / Allure）
+- 演示项目隔离（`example/`）
 
 ---
 
-## 3 分钟上手
+## 快速开始
 
 ### 1) 安装依赖
 
@@ -20,235 +21,176 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2) 直接跑一个测试（原生 pytest）
+### 2) 运行 API 测试（默认入口）
 
 ```bash
-.\.venv\Scripts\python.exe -m pytest tests/ecshoplogin.py -v
+.\.venv\Scripts\python.exe -m pytest tests/api -v
 ```
 
-### 3) 用脚本跑并按需生成报告
+### 3) 运行演示 UI 测试（独立目录）
 
 ```bash
-# 默认：是否产报告由 config.yaml 的 project.report_enabled 控制
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py -v
-
-# 显式生成报告（HTML + Markdown）
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py -v --report
+.\.venv\Scripts\python.exe -m pytest example/tests -v --test-env=demo
 ```
 
 ---
 
-## 项目结构
+## 目录结构（重构后）
 
 ```text
 my-selenium-repo/
 ├── config.yaml
 ├── data/
-│   ├── 
 │   └── scenarios/
-│       └── ecshop_login.yaml
+│       └── api/
+│           └── httpbin_smoke.yaml
+├── example/
+│   ├── data/
+│   │   └── scenarios/
+│   │       └── ecshop_login.yaml
+│   ├── pages/
+│   │   ├── base_page.py
+│   │   ├── login_page.py
+│   │   ├── search.py
+│   │   ├── shopping_page.py
+│   │   └── shopping_car_page.py
+│   └── tests/
+│       ├── test_ecshop_flow.py
+│       └── test_ecshop_login_parametrize.py
 ├── my_framework/
-│   ├── base_test.py
+│   ├── api_client.py
+│   ├── assertions_api.py
+│   ├── assertions_ui.py
 │   ├── assertions.py
+│   ├── base_test.py
 │   └── yaml_parametrize.py
-├── pages/
-│   ├── base_page.py
-│   ├── login_page.py
-│   ├── search.py
-│   ├── shopping_page.py
-│   └── shopping_car_page.py
+├── tests/
+│   ├── conftest.py
+│   ├── api/
+│   │   ├── conftest.py
+│   │   └── test_httpbin_api.py
+│   └── ui/
+│       └── conftest.py
 ├── scripts/
 │   └── run_tests.py
-├── tests/
-│   ├── ecshoplogin.py
-│   └── test_ecshop_login_parametrize.py
 ├── pytest.ini
 └── Makefile
 ```
 
-### 分层职责
+---
 
-- `config.yaml`：框架配置（环境、截图、报告开关）
-- `data/`：测试数据
-- `pages/`：页面对象（只配路径和定位器，不写 IP）
-- `my_framework/`：框架能力（基类、断言、参数化）
-- `tests/`：业务测试与参数化用例
-- `scripts/`：测试执行脚本
+## 分层与解耦策略
+
+- `my_framework/`：框架能力层（参数化、断言、API 客户端、UI 基类）
+- `tests/`：正式测试入口（API/UI 可长期演进）
+- `example/`：演示工程（可删可换，不影响框架主逻辑）
+- `tests/conftest.py`：全局通用能力（如 `--test-env`）
+- `tests/api/conftest.py`：API 专属 fixture（如 `api_client`）
+- `tests/ui/conftest.py`：UI 专属 fixture（可继续扩展浏览器策略）
 
 ---
 
 ## 配置说明（config.yaml）
 
-### 1) 环境配置（生效）
-
-`BaseTest` 会读取当前环境，`BasePage.open_path()` 会自动拼接 `base_url`。
+环境配置现在支持 UI 与 API 双域：
 
 ```yaml
 environments:
   default:
     base_url: "http://192.168.47.129"
     timeout: 10
-  staging:
-    base_url: "http://192.168.47.129"
-    timeout: 15
+    api_base_url: "https://httpbin.org"
+    api_timeout: 10
 ```
 
 切换环境：
 
 ```bash
-.\.venv\Scripts\python.exe -m pytest tests --test-env=staging -v
-```
-
-### 2) 失败截图开关
-
-```yaml
-project:
-  screenshot_on_failure: false
-  screenshot_dir: "artifacts/screenshots"
-```
-
-临时覆盖：
-
-```bash
-set SCREENSHOT_ON_FAILURE=true
-```
-
-### 3) 报告默认开关
-
-```yaml
-project:
-  report_enabled: false
-  report_dir: "reports"
-```
-
-- `false`：脚本默认只跑测试，不产报告
-- 可用 CLI `--report` 临时开启
-
----
-
-## 测试数据设计
-
-### 通用数据（`data/test_data.yaml`）
-
-用于常规流程测试的默认值（例如账号、关键字、商品 ID）。
-
-### 参数化数据（`data/scenarios/*.yaml`）
-
-用于一条测试生成多条 case。
-
-示例：`data/scenarios/ecshop_login.yaml`
-
-```yaml
-cases:
-  - id: "login_success_valid_user"
-    input:
-      username: "test"
-      password: "123456"
-    expected:
-      result: "success"
-      contains_any: ["登录成功"]
+.\.venv\Scripts\python.exe -m pytest tests -v --test-env=staging
 ```
 
 ---
 
-## YAML 参数化用法
+## YAML 参数化
 
-装饰器（`my_framework/yaml_parametrize.py`）：
+使用 `my_framework/yaml_parametrize.py`：
 
 ```python
-@yaml_parametrize("case", "cases", data_file="data/scenarios/ecshop_login.yaml")
-def test_login_by_yaml_case(sb, case):
+@yaml_parametrize("case", "cases", data_file="data/scenarios/api/httpbin_smoke.yaml")
+def test_xxx(case):
     ...
 ```
 
-执行链路：
-
-1. 读取 YAML
-2. 生成 pytest 参数化 case
-3. 逐条执行真实 UI 流程
-4. 按 `expected` 调用断言封装校验
+它与 UI/API 无耦合，可直接复用。
 
 ---
 
-## 断言与输出策略
+## 断言拆分
 
-项目使用 `my_framework/assertions.py`，支持：
+- UI 断言：`my_framework/assertions_ui.py`
+  - `assert_page_contains_any(...)`
+  - `assert_page_not_contains(...)`
+  - `assert_url_contains(...)`
+- API 断言：`my_framework/assertions_api.py`
+  - `assert_status_code(...)`
+  - `assert_json_path_equals(...)`
+  - `assert_json_contains(...)`
 
-- `assert_page_contains_any(...)`
-- `assert_page_contains_all(...)`
-- `assert_page_not_contains(...)`
-- `assert_url_contains(...)`
-
-断言失败信息包含：业务提示、期望关键词、当前 URL、失败原因。  
-同时项目已禁用 `pytest-markdown-report` 的终端接管，保留原生 pytest 输出风格。
+`my_framework/assertions.py` 保留为兼容导出层，避免旧代码立即失效。
 
 ---
 
-## 报告管理（scripts/run_tests.py）
+## 运行命令
 
-### 支持报告类型
-
-1. `pytest-html`（HTML）
-2. Markdown（由 junitxml 转换生成，AI 友好）
-3. Allure（可选）
-
-### 常用命令
+### 原生 pytest
 
 ```bash
-# 默认（是否产报告由 config.yaml 控制）
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py -v
+# API
+.\.venv\Scripts\python.exe -m pytest tests/api -v
 
-# 强制生成 HTML + Markdown 报告
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py -v --report
+# 演示 UI
+.\.venv\Scripts\python.exe -m pytest example/tests -v --test-env=demo
 
-# 强制关闭 HTML + Markdown 报告
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py -v --no-report
-
-# 指定报告目录
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py -v --report --report-dir reports
-
-# 生成 Allure（会检查 java / allure 是否可用）
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py --allure
-
-# 仅生成 Allure 原始结果
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/ecshoplogin.py --allure-only
+# 按 marker 运行
+.\.venv\Scripts\python.exe -m pytest tests -m api -v
+.\.venv\Scripts\python.exe -m pytest example/tests -m "ui and demo" -v
 ```
 
-### 报告目录结构
+### 统一脚本（报告管理）
+
+```bash
+# 默认：是否产报告由 config.yaml 的 project.report_enabled 控制
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api -v
+
+# 强制启用 HTML + Markdown
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api -v --report
+
+# 仅导出 Allure 原始数据
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api --allure-only
+
+# 生成 Allure HTML（需要 java + allure 命令可用）
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api --allure
+```
+
+---
+
+## 报告输出结构
 
 ```text
 reports/
-└── 20260519_173932/
+└── 20260525_190000/
     ├── report.html
     ├── report.md
     ├── report.xml
-    ├── allure-results/   # 仅 --allure / --allure-only
-    └── allure-report/    # 仅 --allure
-```
-
-### Makefile（可选）
-
-```bash
-make test
-make test-allure
-make test-allure-only
+    ├── allure-results/
+    └── allure-report/
 ```
 
 ---
 
-## 常见问题
+## 迁移后的维护建议
 
-### 为什么直接 `python tests/xxx.py` 会报模块导入错误？
-
-因为 pytest 项目应通过 pytest 入口运行，不要直接执行测试文件。
-
-正确方式：
-
-```bash
-.\.venv\Scripts\python.exe -m pytest tests/xxx.py -v
-```
-
-### 为什么脚本跑出来和原生 pytest 终端输出不一样？
-
-项目已在 `pytest.ini` 和脚本中禁用了 `pytest-markdown-report` 的终端接管。  
-如果你仍看到 markdown 风格输出，请确认没有手动启用该插件参数。
+- 正式项目用例写在 `tests/`，演示仅放在 `example/`
+- 新增 API fixture 时优先写入 `tests/api/conftest.py`
+- UI/API 断言不要混用，避免后期维护成本上升
+- 若要引入业务 UI 测试，可新增 `tests/ui/test_*.py`，不影响 `example/`

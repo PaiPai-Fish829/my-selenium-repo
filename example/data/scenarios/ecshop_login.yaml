@@ -1,0 +1,30 @@
+cases:
+  - id: "login_success_valid_user"
+    title: "在登录页面，输入正确的用户名与密码，登录成功"
+    input:
+      username: "test"
+      password: "123456"
+    expected:
+      result: "success"
+      contains_any:
+        - "登录成功"
+
+  - id: "login_fail_wrong_password"
+    title: "在登录页面，输入正确的用户名与错误的密码，登录失败"
+    input:
+      username: "test"
+      password: "12345612121"
+    expected:
+      result: "fail"
+      contains_any:
+        - "用户名或密码错误"
+
+  - id: "login_fail_wrong_username"
+    title: "在登录页面，输入错误的用户名与正确的密码，登录失败"
+    input:
+      username: "test1212"
+      password: "123456"
+    expected:
+      result: "fail"
+      contains_any:
+        - "用户名或密码错误"

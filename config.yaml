@@ -11,6 +11,15 @@ environments:
   default:
     base_url: "http://192.168.47.129"
     timeout: 10
+    api_base_url: "https://httpbin.org"
+    api_timeout: 10
   staging:
     base_url: "http://192.168.47.129"
     timeout: 15
+    api_base_url: "https://httpbin.org"
+    api_timeout: 15
+  demo:
+    base_url: "http://192.168.47.129"
+    timeout: 10
+    api_base_url: "https://httpbin.org"
+    api_timeout: 10

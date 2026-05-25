@@ -9,7 +9,7 @@ import yaml
 from seleniumbase import BaseCase
 from selenium.common.exceptions import NoSuchWindowException, WebDriverException
 
-from my_framework.assertions import (
+from my_framework.assertions_ui import (
     assert_page_contains,
     assert_page_contains_all,
     assert_page_contains_any,
