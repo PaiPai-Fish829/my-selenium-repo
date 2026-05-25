@@ -44,7 +44,7 @@ pip install -r requirements.txt
 my-selenium-repo/
 ├── config.yaml
 ├── data/
-│   ├── test_data.yaml
+│   ├── 
 │   └── scenarios/
 │       └── ecshop_login.yaml
 ├── my_framework/
@@ -61,9 +61,7 @@ my-selenium-repo/
 │   └── run_tests.py
 ├── tests/
 │   ├── ecshoplogin.py
-│   ├── test_ecshop_login_parametrize.py
-│   ├── test_yaml_parametrize.py
-│   └── test_example.py
+│   └── test_ecshop_login_parametrize.py
 ├── pytest.ini
 └── Makefile
 ```
