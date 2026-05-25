@@ -1,0 +1,16 @@
+cases:
+  - id: "get_ip_success"
+    title: "访问 /ip 返回 200"
+    request:
+      method: "GET"
+      path: "/ip"
+    expected:
+      status_code: 200
+
+  - id: "get_headers_success"
+    title: "访问 /headers 返回 200 且包含 headers 字段"
+    request:
+      method: "GET"
+      path: "/headers"
+    expected:
+      status_code: 200
