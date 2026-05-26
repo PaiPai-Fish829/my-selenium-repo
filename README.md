@@ -40,14 +40,20 @@ pip install -r requirements.txt
 ```text
 my-selenium-repo/
 ├── config.yaml
+├── docs/
+│   ├── api-env-config.md
+│   ├── ui-env-config.md
+│   └── framework-core.md
 ├── data/
 │   └── scenarios/
 │       └── api/
 │           └── httpbin_smoke.yaml
 ├── example/
+│   ├── README.md
 │   ├── data/
 │   │   └── scenarios/
-│   │       └── ecshop_login.yaml
+│   │       ├── ecshop_login.yaml
+│   │       └── reqres_products.yaml
 │   ├── pages/
 │   │   ├── base_page.py
 │   │   ├── login_page.py
@@ -56,12 +62,15 @@ my-selenium-repo/
 │   │   └── shopping_car_page.py
 │   └── tests/
 │       ├── test_ecshop_flow.py
-│       └── test_ecshop_login_parametrize.py
+│       ├── test_ecshop_login_parametrize.py
+│       ├── test_reqres_api_demo.py
+│       └── test_reqres_session_token_demo.py
 ├── my_framework/
 │   ├── api_client.py
 │   ├── assertions_api.py
 │   ├── assertions_ui.py
 │   ├── assertions.py
+│   ├── base_api_test.py
 │   ├── base_test.py
 │   └── yaml_parametrize.py
 ├── tests/
@@ -109,6 +118,11 @@ environments:
 .\.venv\Scripts\python.exe -m pytest tests -v --test-env=staging
 ```
 
+API 环境配置的完整字段、优先级与鉴权参数说明见：
+
+- `docs/api-env-config.md`
+- `docs/ui-env-config.md`（UI 环境配置说明）
+
 ---
 
 ## YAML 参数化
@@ -122,6 +136,10 @@ def test_xxx(case):
 ```
 
 它与 UI/API 无耦合，可直接复用。
+
+`BaseTest` 与 `yaml_parametrize` 的轻量说明见：
+
+- `docs/framework-core.md`
 
 ### YAML 动态 Marker（API 场景）
 
