@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -80,18 +82,66 @@ def check_command_available(command: str) -> bool:
     return shutil.which(command) is not None
 
 
-def check_allure_environment() -> tuple[bool, str]:
+def _command_exists(command: str) -> bool:
+    # 支持绝对路径可执行文件 / bat / cmd
+    if os.path.sep in command or (os.path.altsep and os.path.altsep in command):
+        return Path(command).exists()
+    return check_command_available(command)
+
+
+def _parse_command(raw: str) -> list[str]:
+    return shlex.split(raw, posix=False)
+
+
+def _is_command_runnable(command_parts: list[str]) -> bool:
+    try:
+        result = subprocess.run(
+            [*command_parts, "--version"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return result.returncode == 0
+    except OSError:
+        return False
+
+
+def resolve_allure_command(project_cfg: dict) -> list[str] | None:
+    # 优先级：环境变量 ALLURE_CMD > config.yaml(project.allure_cmd) > PATH 中 allure > npx 兜底
+    raw_cmd = os.getenv("ALLURE_CMD") or str(project_cfg.get("allure_cmd", "")).strip()
+    if raw_cmd:
+        parsed = _parse_command(raw_cmd)
+        if parsed and _command_exists(parsed[0]) and _is_command_runnable(parsed):
+            return parsed
+
+    if os.name == "nt":
+        if check_command_available("allure.cmd") and _is_command_runnable(["allure.cmd"]):
+            return ["allure.cmd"]
+        if check_command_available("npx.cmd") and _is_command_runnable(
+            ["npx.cmd", "allure-commandline"]
+        ):
+            return ["npx.cmd", "allure-commandline"]
+
+    if check_command_available("allure") and _is_command_runnable(["allure"]):
+        return ["allure"]
+    if check_command_available("npx") and _is_command_runnable(["npx", "allure-commandline"]):
+        return ["npx", "allure-commandline"]
+    return None
+
+
+def check_allure_environment(allure_exec: list[str] | None) -> tuple[bool, str]:
     missing: list[str] = []
     if not check_command_available("java"):
         missing.append("Java")
-    if not check_command_available("allure"):
+    if not allure_exec:
         missing.append("allure")
 
     if missing:
         tips = (
             "、".join(missing)
             + " 不可用。请先安装并确保命令在 PATH 中。\n"
-            + "你也可以先不加 --allure，仅生成 HTML + Markdown 报告。"
+            + "你也可以先不加 --allure，仅生成 HTML + Markdown 报告。\n"
+            + "可选方案：设置环境变量 ALLURE_CMD 或 config.yaml 的 project.allure_cmd。"
         )
         return False, tips
     return True, ""
@@ -189,6 +239,7 @@ def main() -> int:
     args, passthrough_pytest_args = parser.parse_known_args()
     config = load_config()
     project_cfg = config.get("project", {}) if isinstance(config, dict) else {}
+    allure_exec = resolve_allure_command(project_cfg)
 
     if args.allure and args.allure_only:
         parser.error("--allure 与 --allure-only 不能同时使用。")
@@ -234,7 +285,7 @@ def main() -> int:
         pytest_args.append(f"--alluredir={allure_results}")
 
     if args.allure:
-        ok, msg = check_allure_environment()
+        ok, msg = check_allure_environment(allure_exec)
         if not ok:
             print(f"[报告] Allure 环境检查失败：{msg}")
             return 2
@@ -255,14 +306,17 @@ def main() -> int:
         print(f"[报告] Allure results: {allure_results}")
 
     if args.allure and pytest_code == 0:
+        allure_single_file = to_bool(project_cfg.get("allure_single_file"), default=True)
         allure_cmd = [
-            "allure",
+            *(allure_exec or ["allure"]),
             "generate",
             str(allure_results),
             "-o",
             str(allure_report),
             "--clean",
         ]
+        if allure_single_file:
+            allure_cmd.append("--single-file")
         print(f"[运行] {' '.join(allure_cmd)}")
         allure_code = run_command(allure_cmd)
         if allure_code != 0:
