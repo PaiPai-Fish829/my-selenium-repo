@@ -11,7 +11,23 @@ from my_framework.api_client import ApiClient
 
 
 class BaseApiTest:
-    """API 测试基类：封装 Token 与 Cookie 登录能力。"""
+    """
+    API 自动化测试基类，统一管理鉴权与客户端生命周期。
+
+    主要作用：
+    - 统一读取 API 运行配置（`base_url`、`auth`、超时等），避免测试用例重复处理配置细节。
+    - 提供 Token 鉴权能力，支持环境变量直读、静态 token、登录换取 token 以及过期前自动刷新。
+    - 提供 Cookie 登录能力，返回已登录 `Session` 供需要会话态的接口场景复用。
+    - 在测试方法前后自动创建并回收 `ApiClient`，减少资源泄漏风险。
+
+    外部主要接口：
+    - `get_token(force_refresh=False) -> str`
+      获取可用 Token；在接近过期时自动刷新，`force_refresh=True` 可强制重取。
+    - `login_and_get_session(client=None) -> Session`
+      执行登录并返回携带 Cookie 的会话对象；可传入已有 `ApiClient` 复用连接。
+    - `setup_method() / teardown_method()`
+      供测试框架调用的生命周期钩子，用于初始化与关闭 `self.api_client`。
+    """
 
     _token_lock = Lock()
     _cached_token: str | None = None
@@ -119,7 +135,10 @@ class BaseApiTest:
     @classmethod
     def get_token(cls, *, force_refresh: bool = False) -> str:
         """
-        获取有效 Token，并在接近过期（默认提前 60 秒）时自动刷新。
+        对外提供 Token 获取入口。
+
+        默认会在 Token 临近过期（提前 60 秒）时自动刷新；支持通过 force_refresh
+        跳过缓存直接重新登录获取最新 Token。
         """
         settings = cls._runtime_settings()
         auth_cfg = settings["auth"]
@@ -188,7 +207,11 @@ class BaseApiTest:
 
     @classmethod
     def login_and_get_session(cls, *, client: ApiClient | None = None) -> Session:
-        """执行登录并返回已带 Cookie 的 Session。"""
+        """
+        对外提供 Cookie 登录入口，返回已登录的 Session。
+
+        当传入 client 时复用该 `ApiClient` 的连接与会话；未传入时内部新建客户端。
+        """
         settings = cls._runtime_settings()
         auth_cfg = settings["auth"]
         login_path = str(auth_cfg.get("cookie_login_path", auth_cfg.get("login_path", "/login")))
@@ -225,8 +248,10 @@ class BaseApiTest:
         return managed_client.session
 
     def setup_method(self) -> None:
+        """测试方法执行前初始化 ApiClient。"""
         self.api_client = ApiClient.from_config()
 
     def teardown_method(self) -> None:
+        """测试方法执行后关闭 ApiClient，释放连接资源。"""
         if hasattr(self, "api_client") and isinstance(self.api_client, ApiClient):
             self.api_client.close()

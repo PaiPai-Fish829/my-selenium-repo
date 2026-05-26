@@ -20,7 +20,24 @@ DEFAULT_SENSITIVE_FIELDS = {
 
 
 class ApiClient:
-    """通用 API 客户端：负责发送请求、维护会话、输出可审计请求快照。"""
+    """
+    通用 API 客户端，统一封装项目中的 HTTP 请求入口。
+
+    主要作用：
+    - 统一管理 `base_url`、超时、默认请求头，避免测试代码重复拼装请求参数。
+    - 复用 `requests.Session`，支持 Cookie 会话与连接复用。
+    - 支持 Token/Cookie/Both 三种鉴权模式，便于适配不同接口安全策略。
+    - 自动记录最近一次请求和响应快照，并对敏感字段脱敏，方便失败排查与报告输出。
+    - 支持从 `config.yaml` 读取 API 运行配置，减少硬编码。
+
+    外部主要接口：
+    - `from_config(...)`：根据配置文件创建客户端实例（推荐测试中优先使用）。
+    - `request(...)`：底层统一请求方法，可指定 `method/path/url/auth_mode` 等参数。
+    - `get/post/put/patch/delete(...)`：常用 HTTP 动词快捷方法。
+    - `configure_auth(...)` / `set_auth_token(...)`：运行时调整鉴权策略与 Token。
+    - `get_last_request()` / `get_last_response()`：获取最近一次脱敏后的请求/响应快照。
+    - `close()`：关闭底层 Session，释放连接资源。
+    """
 
     def __init__(
         self,
