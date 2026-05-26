@@ -1,0 +1,31 @@
+cases:
+  - id: "reqres_products_without_auth"
+    title: "未携带鉴权头访问 products records"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/api/collections/products/records"
+      params:
+        project_id: "24993"
+      use_auth: false
+      auth_mode: "token"
+    expected:
+      status_code: 401
+
+  - id: "reqres_products_with_api_key"
+    title: "携带 x-api-key 与环境头访问 products records"
+    markers: ["api", "demo", "need_auth"]
+    request:
+      method: "GET"
+      path: "/api/collections/products/records"
+      params:
+        project_id: "24993"
+      headers:
+        X-Reqres-Env: "prod"
+      use_auth: false
+      auth_mode: "token"
+      use_api_key_header: true
+    expected:
+      status_code: 200
+      require_json_keys:
+        - "records"
