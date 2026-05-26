@@ -262,6 +262,8 @@ reports/
     └── allure-report/
 ```
 
+说明：测试报告统一输出到 `reports/<timestamp>/`，仓库根目录不再保留 `last_report.html`。
+
 ---
 
 ## 迁移后的维护建议
