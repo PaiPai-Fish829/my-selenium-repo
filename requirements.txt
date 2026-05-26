@@ -1,3 +1,5 @@
+allure-pytest==2.16.0
+allure-python-commons==2.16.0
 attrs==26.1.0
 beautifulsoup4==4.14.3
 behave==1.2.6
