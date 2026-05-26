@@ -22,12 +22,15 @@ pip-wheel-metadata/
 .coverage.*
 coverage.xml
 htmlcov/
+allure-results/
+allure-report/
 
 # Runtime logs / reports
 reports/
 artifacts/
 latest_logs/
 archived_logs/
+*.log
 
 # IDE / editor files
 .idea/
