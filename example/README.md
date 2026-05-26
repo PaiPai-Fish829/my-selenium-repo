@@ -6,6 +6,7 @@
 - `example/tests/`：演示测试
 - `example/data/`：演示用 YAML 数据
 - `example/tests/test_reqres_api_demo.py`：ReqRes API 演示（401 + x-api-key 鉴权）
+- `example/tests/test_reqres_session_token_demo.py`：ReqRes Bearer Session Token 演示
 
 ```bash
 # 执行演示：
@@ -20,4 +21,13 @@
 # 执行需要 API Key 的演示用例（Windows PowerShell）
 $env:REQRES_API_KEY="你的ReqRes项目Key"
 .\.venv\Scripts\python.exe -m pytest example/tests/test_reqres_api_demo.py -v -k with_api_key
+
+# Bearer 方式：直接使用 session token（Windows PowerShell）
+$env:REQRES_SESSION_TOKEN="你的SessionToken"
+.\.venv\Scripts\python.exe -m pytest example/tests/test_reqres_session_token_demo.py -v -k bearer_from_env
+
+# Bearer 方式：验证码换 token（Windows PowerShell）
+$env:REQRES_LOGIN_EMAIL="你的邮箱"
+$env:REQRES_LOGIN_CODE="控制台/邮件验证码"
+.\.venv\Scripts\python.exe -m pytest example/tests/test_reqres_session_token_demo.py -v -k exchange_code
 ```
