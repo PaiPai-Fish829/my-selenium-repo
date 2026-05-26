@@ -123,7 +123,65 @@ def test_xxx(case):
 
 它与 UI/API 无耦合，可直接复用。
 
+### YAML 动态 Marker（API 场景）
+
+API YAML 用例可增加 `markers` 字段，`tests/api/conftest.py` 会在收集阶段动态挂载到用例：
+
+```yaml
+cases:
+  - id: get_profile
+    markers: [api, need_auth, slow]
+    request:
+      method: GET
+      path: /profile
+```
+
+可用的 API 相关 marker：
+
+- `api`：标识 API 测试
+- `need_auth`：自动触发 Token 鉴权客户端 fixture
+- `need_cookies`：自动触发 Cookie 登录态客户端 fixture
+- `slow`：标识慢速用例
+- `dependency(depends=[...])`：依赖关系标识（建议配合 `pytest-dependency`）
+
 ---
+
+## API 封装说明
+
+### 1) ApiClient（`my_framework/api_client.py`）
+
+- 使用 `requests.Session` 复用连接与 Cookie
+- 支持 Token / Cookie 鉴权（`auth_mode=token|cookie|both`）
+- 支持从 `config.yaml` 自动读取 API 配置（兼容 `api.*` 与 `environments.*`）
+- 支持 `get/post/put/patch/delete` 统一调用
+- 提供 `get_last_request()` / `get_last_response()`，供 pytest fixture 记录日志
+- 自动脱敏敏感字段：`password/token/authorization/secret/api_key`（支持嵌套）
+
+### 2) BaseApiTest（`my_framework/base_api_test.py`）
+
+- `get_token()`：登录获取 Token，内置缓存与过期前 60 秒自动刷新
+- `login_and_get_session()`：执行登录并返回带 Cookie 的 Session
+- `setup_method/teardown_method`：初始化与释放 `ApiClient`
+
+### 3) API Fixtures（`tests/api/conftest.py`）
+
+- `api_client`：基础客户端（function）
+- `auth_token`：会话级 Token（session）
+- `authenticated_api_client`：自动注入 Token 的客户端（function）
+- `api_session_with_cookies`：带 Cookie 登录态的客户端（function）
+- `api_request_log`：自动记录请求/响应；失败时附加脱敏详情
+
+### 4) API 使用示例
+
+```python
+import pytest
+
+@pytest.mark.api
+@pytest.mark.need_auth
+def test_profile(authenticated_api_client):
+    response = authenticated_api_client.get("/profile")
+    assert response.status_code == 200
+```
 
 ## 断言拆分
 
