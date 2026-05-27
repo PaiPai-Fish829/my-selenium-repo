@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+from typing import Any
+
+import allure
+import pytest
+
+from my_framework.api_client import ApiClient
+from my_framework.assertions_api import assert_json_contains, assert_status_code
+from my_framework.yaml_parametrize import yaml_parametrize
+
+PRIORITY_TO_SEVERITY = {
+    "P0": allure.severity_level.BLOCKER,
+    "P1": allure.severity_level.CRITICAL,
+    "P2": allure.severity_level.NORMAL,
+    "P3": allure.severity_level.MINOR,
+}
+
+
+def _build_httpbin_client() -> ApiClient:
+    return ApiClient(
+        base_url="https://httpbin.org",
+        timeout=15,
+        default_headers={
+            "Accept": "application/json",
+        },
+        enable_token_auth=False,
+        enable_cookie_auth=True,
+    )
+
+
+@pytest.mark.demo
+@pytest.mark.api
+@yaml_parametrize(
+    "case",
+    "cases",
+    data_file="example/data/scenarios/httpbin_session_auth_demo.yaml",
+)
+def test_httpbin_cookie_session_auth(case: dict[str, Any]) -> None:
+    """
+    HTTPBin Session(Cookie) 鉴权演示（参数化）：
+    - 先调用 /cookies/set/{name}/{value} 写入会话 Cookie
+    - 再调用 /cookies 验证会话状态
+    """
+    request_data = case.get("request", {})
+    expected = case.get("expected", {})
+    category = str(case.get("category", "session")).strip()
+    priority = str(case.get("priority", "P2")).strip().upper()
+
+    allure.dynamic.title(str(case.get("title", case.get("id", "httpbin_session_case"))))
+    allure.dynamic.feature(f"API-{category}")
+    allure.dynamic.story("HTTPBin Session/Cookie 鉴权参数化")
+    allure.dynamic.tag("api", "demo", "session-auth", category, priority)
+    allure.dynamic.severity(PRIORITY_TO_SEVERITY.get(priority, allure.severity_level.NORMAL))
+
+    cookie_name = str(request_data.get("cookie_name", "")).strip()
+    cookie_value = str(request_data.get("cookie_value", "")).strip()
+    if not cookie_name or not cookie_value:
+        raise AssertionError("cookie_name/cookie_value 不能为空")
+
+    set_cookie_path = str(request_data.get("set_cookie_path", "/cookies/set/{cookie_name}/{cookie_value}"))
+    verify_path = str(request_data.get("verify_path", "/cookies"))
+    formatted_set_cookie_path = set_cookie_path.format(
+        cookie_name=cookie_name,
+        cookie_value=cookie_value,
+    )
+
+    client = _build_httpbin_client()
+    try:
+        set_cookie_response = client.request(
+            method=str(request_data.get("set_cookie_method", "GET")),
+            path=formatted_set_cookie_path,
+            params=request_data.get("set_cookie_params"),
+            use_auth=False,
+            auth_mode="cookie",
+        )
+        verify_response = client.request(
+            method=str(request_data.get("verify_method", "GET")),
+            path=verify_path,
+            params=request_data.get("verify_params"),
+            use_auth=False,
+            auth_mode="cookie",
+        )
+    finally:
+        client.close()
+
+    assert_status_code(
+        set_cookie_response.status_code,
+        int(expected.get("set_cookie_status_code", 200)),
+        message=f"HTTPBin 设置会话 Cookie 失败: {case.get('id', 'unknown_case')}",
+    )
+    assert_status_code(
+        verify_response.status_code,
+        int(expected.get("verify_status_code", 200)),
+        message=f"HTTPBin 会话 Cookie 校验失败: {case.get('id', 'unknown_case')}",
+    )
+
+    payload = verify_response.json()
+    should_exist = bool(expected.get("assert_cookie_presence", True))
+    if should_exist:
+        expected_json_contains = expected.get(
+            "json_contains",
+            {"cookies": {cookie_name: cookie_value}},
+        )
+        assert_json_contains(
+            payload,
+            expected_json_contains,
+            message=f"HTTPBin Session JSON 断言失败: {case.get('id', 'unknown_case')}",
+        )
+    else:
+        cookies = payload.get("cookies", {})
+        assert cookie_name not in cookies, (
+            f"HTTPBin Session 负向断言失败: {cookie_name} 不应存在, "
+            f"当前 cookies={cookies}"
+        )

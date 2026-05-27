@@ -53,7 +53,8 @@ my-selenium-repo/
 │   ├── data/
 │   │   └── scenarios/
 │   │       ├── ecshop_login.yaml
-│   │       └── reqres_products.yaml
+│   │       ├── httpbin_session_auth_demo.yaml
+│   │       └── httpbin_token_auth_demo.yaml
 │   ├── pages/
 │   │   ├── base_page.py
 │   │   ├── login_page.py
@@ -61,10 +62,12 @@ my-selenium-repo/
 │   │   ├── shopping_page.py
 │   │   └── shopping_car_page.py
 │   └── tests/
-│       ├── test_ecshop_flow.py
-│       ├── test_ecshop_login_parametrize.py
-│       ├── test_reqres_api_demo.py
-│       └── test_reqres_session_token_demo.py
+│       ├── api/
+│       │   ├── test_httpbin_api_demo.py
+│       │   └── test_httpbin_session_token_demo.py
+│       └── ui/
+│           ├── test_ecshop_flow.py
+│           └── test_ecshop_login_parametrize.py
 ├── my_framework/
 │   ├── api_client.py
 │   ├── assertions_api.py
@@ -225,11 +228,11 @@ def test_profile(authenticated_api_client):
 .\.venv\Scripts\python.exe -m pytest tests/api -v
 
 # 演示 UI
-.\.venv\Scripts\python.exe -m pytest example/tests -v --test-env=demo
+.\.venv\Scripts\python.exe -m pytest example/tests/ui -v --test-env=demo
 
 # 按 marker 运行
 .\.venv\Scripts\python.exe -m pytest tests -m api -v
-.\.venv\Scripts\python.exe -m pytest example/tests -m "ui and demo" -v
+.\.venv\Scripts\python.exe -m pytest example/tests/ui -m "ui and demo" -v
 ```
 
 ### 统一脚本（报告管理）
