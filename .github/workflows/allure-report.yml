@@ -51,7 +51,8 @@ jobs:
 
       - name: Run Tests And Build Allure
         run: |
-          python scripts/run_tests.py tests/api --allure --report-dir reports-ci
+          # httpbin.org 在 CI 偶发 5xx，给 API 用例增加有限重试以降低外部波动导致的误报
+          python scripts/run_tests.py tests/api --allure --report-dir reports-ci --pytest-arg=--reruns=2 --pytest-arg=--reruns-delay=2
 
       - name: Prepare Publish Directory
         run: |
