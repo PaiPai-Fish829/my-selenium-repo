@@ -21,6 +21,21 @@ DEFAULT_SENSITIVE_FIELDS = {
 
 
 class ApiClient:
+    """
+    封装目的:
+    - 统一 API 调用入口，屏蔽 requests 的重复样板代码。
+    - 在框架层提供鉴权、日志脱敏、请求追踪等测试所需能力。
+
+    封装实现:
+    - 基于 requests.Session 实现连接复用和可选 Cookie 会话。
+    - 通过配置中心读取环境参数，构建基础 URL、超时和默认请求头。
+    - 在 request 主流程中记录最近一次请求/响应并执行敏感字段脱敏。
+
+    外部接口:
+    - 构造函数支持 base_url、timeout、headers、auth 和脱敏字段定制。
+    - 提供 from_config/read_api_runtime_settings 快速初始化能力。
+    - 提供 request/get/post/put/patch/delete 与调试辅助接口。
+    """
     def __init__(
         self,
         base_url: str,
@@ -33,6 +48,19 @@ class ApiClient:
         enable_cookie_auth: bool = True,
         sensitive_fields: Iterable[str] | None = None,
     ) -> None:
+        """
+        封装目的:
+        - 初始化 API 客户端运行状态，建立后续请求所需上下文。
+
+        封装实现:
+        - 标准化 base_url 并初始化 requests.Session。
+        - 合并默认请求头，设置 Token/Cookie 鉴权开关。
+        - 构建脱敏字段集合并准备请求追踪缓存。
+
+        外部接口:
+        - 入参: 基础地址、超时、默认头、Session、鉴权参数及脱敏字段。
+        - 出参: 无显式返回，实例化完成后可直接发起请求。
+        """
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.session = session or requests.Session()
@@ -59,6 +87,19 @@ class ApiClient:
         auth_token: str | None = None,
         sensitive_fields: Iterable[str] | None = None,
     ) -> "ApiClient":
+        """
+        封装目的:
+        - 通过配置文件与环境变量快速创建可用客户端，减少测试样板代码。
+
+        封装实现:
+        - 调用 read_api_runtime_settings 解析配置。
+        - 按显式参数 > 配置 > 环境变量优先级解析 Token。
+        - 返回带完整运行参数的 ApiClient 实例。
+
+        外部接口:
+        - 入参: 可选配置文件路径、环境名、Token、脱敏字段。
+        - 出参: ApiClient 实例。
+        """
         settings = cls.read_api_runtime_settings(config_path=config_path, env_name=env_name)
         token = auth_token or settings["token"] or os.getenv(settings["token_env"]) or os.getenv("API_TOKEN")
         return cls(
@@ -78,6 +119,19 @@ class ApiClient:
         config_path: str | Path | None = None,
         env_name: str | None = None,
     ) -> dict[str, Any]:
+        """
+        封装目的:
+        - 统一读取并归并 API 运行配置，避免调用方重复处理多层配置结构。
+
+        封装实现:
+        - 解析全局 api 节点与 environments 下环境专属节点。
+        - 以分层兜底策略提取 base_url、timeout、auth 和 headers。
+        - 标准化输出字段，保证上层调用读取稳定。
+
+        外部接口:
+        - 入参: 可选配置路径、环境名称。
+        - 出参: 运行配置字典（含 base_url/timeout/auth/token 等字段）。
+        """
         config_file = Path(config_path) if config_path else PROJECT_ROOT / "config.yaml"
         config = load_yaml(config_file)
         selected_env = env_name or os.getenv("TEST_ENV", "default")
@@ -128,9 +182,31 @@ class ApiClient:
         }
 
     def close(self) -> None:
+        """
+        封装目的:
+        - 显式释放底层 Session 资源。
+
+        封装实现:
+        - 调用 requests.Session.close() 关闭连接池。
+
+        外部接口:
+        - 入参: 无。
+        - 出参: 无。
+        """
         self.session.close()
 
     def set_auth_token(self, token: str | None) -> None:
+        """
+        封装目的:
+        - 在运行时更新 Bearer Token，支持动态鉴权切换。
+
+        封装实现:
+        - 直接替换实例内保存的 auth_token。
+
+        外部接口:
+        - 入参: token，可传 None 清空。
+        - 出参: 无。
+        """
         self.auth_token = token
 
     def configure_auth(
@@ -140,6 +216,17 @@ class ApiClient:
         enable_token_auth: bool | None = None,
         enable_cookie_auth: bool | None = None,
     ) -> None:
+        """
+        封装目的:
+        - 统一修改客户端鉴权策略，避免分散修改实例属性。
+
+        封装实现:
+        - 根据非 None 参数分别更新 token、token 鉴权开关、cookie 鉴权开关。
+
+        外部接口:
+        - 入参: token、enable_token_auth、enable_cookie_auth（均可选）。
+        - 出参: 无。
+        """
         if token is not None:
             self.auth_token = token
         if enable_token_auth is not None:
@@ -148,6 +235,18 @@ class ApiClient:
             self.enable_cookie_auth = enable_cookie_auth
 
     def _build_url(self, path: str) -> str:
+        """
+        封装目的:
+        - 将相对路径与 base_url 统一拼装为最终请求地址。
+
+        封装实现:
+        - 已是绝对 URL 时直接返回。
+        - 相对路径自动补齐前导斜杠并拼接 base_url。
+
+        外部接口:
+        - 入参: path，请求路径或完整 URL。
+        - 出参: 可直接请求的完整 URL 字符串。
+        """
         if path.startswith("http://") or path.startswith("https://"):
             return path
         normalized = path if path.startswith("/") else f"/{path}"
@@ -160,6 +259,18 @@ class ApiClient:
         use_auth: bool,
         use_token_auth: bool,
     ) -> dict[str, str]:
+        """
+        封装目的:
+        - 统一构建请求头，集中处理默认头合并与 Token 注入逻辑。
+
+        封装实现:
+        - 以 Session 头为基准合并调用方传入头。
+        - 当允许鉴权且未显式传 Authorization 时自动注入 Bearer Token。
+
+        外部接口:
+        - 入参: headers、use_auth、use_token_auth。
+        - 出参: 合并后的请求头字典。
+        """
         merged = dict(self.session.headers)
         if headers:
             merged.update(dict(headers))
@@ -181,6 +292,20 @@ class ApiClient:
         use_auth: bool = True,
         auth_mode: str = "token",
     ) -> requests.Response:
+        """
+        封装目的:
+        - 提供统一底层请求执行入口，承载鉴权、超时、追踪和响应采集。
+
+        封装实现:
+        - 解析 url/path、鉴权模式和最终请求头。
+        - 在发送前记录脱敏后的请求快照，发送后记录响应快照。
+        - 按 auth_mode 决定使用 Session（Cookie）或 requests（无会话）发送。
+
+        外部接口:
+        - 入参: method、url/path、params/json/data/headers/timeout 等。
+        - 出参: requests.Response。
+        - 异常: 缺少 url/path 时抛 ValueError，请求异常由 requests 抛出。
+        """
         target = url if url is not None else path
         if not target:
             raise ValueError("request() 需要提供 url 或 path")
@@ -250,6 +375,17 @@ class ApiClient:
         use_auth: bool = True,
         auth_mode: str = "token",
     ) -> requests.Response:
+        """
+        封装目的:
+        - 提供 GET 语义化快捷接口，减少重复 method 传参。
+
+        封装实现:
+        - 内部转调 request("GET", ...)。
+
+        外部接口:
+        - 入参: url、params、headers、timeout、鉴权参数。
+        - 出参: requests.Response。
+        """
         return self.request(
             "GET",
             url,
@@ -271,6 +407,17 @@ class ApiClient:
         use_auth: bool = True,
         auth_mode: str = "token",
     ) -> requests.Response:
+        """
+        封装目的:
+        - 提供 POST 语义化快捷接口。
+
+        封装实现:
+        - 内部转调 request("POST", ...)，透传 json/data 等参数。
+
+        外部接口:
+        - 入参: url、json/data、headers、timeout、鉴权参数。
+        - 出参: requests.Response。
+        """
         return self.request(
             "POST",
             url,
@@ -293,6 +440,17 @@ class ApiClient:
         use_auth: bool = True,
         auth_mode: str = "token",
     ) -> requests.Response:
+        """
+        封装目的:
+        - 提供 PUT 语义化快捷接口。
+
+        封装实现:
+        - 内部转调 request("PUT", ...)，透传更新请求参数。
+
+        外部接口:
+        - 入参: url、json/data、headers、timeout、鉴权参数。
+        - 出参: requests.Response。
+        """
         return self.request(
             "PUT",
             url,
@@ -315,6 +473,17 @@ class ApiClient:
         use_auth: bool = True,
         auth_mode: str = "token",
     ) -> requests.Response:
+        """
+        封装目的:
+        - 提供 PATCH 语义化快捷接口。
+
+        封装实现:
+        - 内部转调 request("PATCH", ...)，透传局部更新参数。
+
+        外部接口:
+        - 入参: url、json/data、headers、timeout、鉴权参数。
+        - 出参: requests.Response。
+        """
         return self.request(
             "PATCH",
             url,
@@ -336,6 +505,17 @@ class ApiClient:
         use_auth: bool = True,
         auth_mode: str = "token",
     ) -> requests.Response:
+        """
+        封装目的:
+        - 提供 DELETE 语义化快捷接口。
+
+        封装实现:
+        - 内部转调 request("DELETE", ...)，透传查询及鉴权参数。
+
+        外部接口:
+        - 入参: url、params、headers、timeout、鉴权参数。
+        - 出参: requests.Response。
+        """
         return self.request(
             "DELETE",
             url,
@@ -347,12 +527,46 @@ class ApiClient:
         )
 
     def get_last_request(self) -> dict[str, Any] | None:
+        """
+        封装目的:
+        - 暴露最近一次请求快照，便于调试和断言。
+
+        封装实现:
+        - 返回内部缓存的深拷贝，避免外部修改原始数据。
+
+        外部接口:
+        - 入参: 无。
+        - 出参: 脱敏后的请求快照或 None。
+        """
         return copy.deepcopy(self._last_request)
 
     def get_last_response(self) -> dict[str, Any] | None:
+        """
+        封装目的:
+        - 暴露最近一次响应快照，便于排障与报告输出。
+
+        封装实现:
+        - 返回内部缓存响应数据的深拷贝。
+
+        外部接口:
+        - 入参: 无。
+        - 出参: 脱敏后的响应快照或 None。
+        """
         return copy.deepcopy(self._last_response)
 
     def _sanitize(self, payload: Any) -> Any:
+        """
+        封装目的:
+        - 对日志/快照中的敏感字段做统一脱敏，避免泄露凭证。
+
+        封装实现:
+        - 递归遍历 Mapping、list、tuple。
+        - 命中 sensitive_fields 的键统一替换为 ***REDACTED***。
+
+        外部接口:
+        - 入参: 任意层级 payload。
+        - 出参: 脱敏后的结构化数据。
+        """
         if isinstance(payload, Mapping):
             sanitized: dict[str, Any] = {}
             for key, value in payload.items():
@@ -370,6 +584,18 @@ class ApiClient:
 
     @staticmethod
     def _response_payload(response: requests.Response) -> Any:
+        """
+        封装目的:
+        - 统一提取响应体，兼容 JSON 与文本场景。
+
+        封装实现:
+        - Content-Type 为 JSON 时优先 response.json()。
+        - 非 JSON 返回文本，超长文本截断至 5000 字符。
+
+        外部接口:
+        - 入参: requests.Response。
+        - 出参: dict/list/str 等可序列化内容。
+        """
         content_type = response.headers.get("Content-Type", "")
         if "application/json" in content_type.lower():
             try:
@@ -383,6 +609,18 @@ class ApiClient:
 
     @staticmethod
     def parse_body_as_json(body: Any) -> Any:
+        """
+        封装目的:
+        - 将多形态响应体尽量转换为 JSON 结构，简化断言代码。
+
+        封装实现:
+        - dict/list 直接返回，bytes 先解码，str 尝试 json.loads。
+        - 解析失败时保留原始字符串。
+
+        外部接口:
+        - 入参: body（dict/list/bytes/str/其他）。
+        - 出参: JSON 结构或原值。
+        """
         if isinstance(body, (dict, list)):
             return body
         if isinstance(body, bytes):
