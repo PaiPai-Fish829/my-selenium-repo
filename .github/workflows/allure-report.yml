@@ -1,0 +1,72 @@
+name: Build And Deploy Allure Report
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  allure:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          npm install -g allure-commandline
+
+      - name: Restore Previous History
+        run: |
+          mkdir -p reports-ci/allure-history
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch origin gh-pages:gh-pages
+            git worktree add gh-pages-worktree gh-pages
+            if [ -d gh-pages-worktree/history ]; then
+              cp -R gh-pages-worktree/history/. reports-ci/allure-history/
+            fi
+            rm -rf gh-pages-worktree
+            git worktree prune
+          fi
+
+      - name: Run Tests And Build Allure
+        run: |
+          python scripts/run_tests.py tests/api --allure --report-dir reports-ci
+
+      - name: Prepare Publish Directory
+        run: |
+          LATEST_RUN_DIR="$(ls -dt reports-ci/*/ | head -n 1)"
+          rm -rf gh-pages-content
+          mkdir -p gh-pages-content
+          cp -R "${LATEST_RUN_DIR}allure-report/." gh-pages-content/
+          mkdir -p gh-pages-content/history
+          if [ -d reports-ci/allure-history ]; then
+            cp -R reports-ci/allure-history/. gh-pages-content/history/
+          fi
+
+      - name: Deploy To GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: gh-pages-content

@@ -12,7 +12,10 @@ import xml.etree.ElementTree as ET
 import yaml
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
+from my_framework.allure_utils import prepare_allure_history, persist_allure_history
 
 def load_config() -> dict:
     config_path = ROOT_DIR / "config.yaml"
@@ -283,6 +286,10 @@ def main() -> int:
 
     if args.allure or args.allure_only:
         pytest_args.append(f"--alluredir={allure_results}")
+        if run_dir and allure_results:
+            inherited = prepare_allure_history(report_root, allure_results)
+            if inherited:
+                print(f"[报告] 已继承历史趋势数据: {report_root / 'allure-history'}")
 
     if args.allure:
         ok, msg = check_allure_environment(allure_exec)
@@ -307,21 +314,46 @@ def main() -> int:
 
     if args.allure and pytest_code == 0:
         allure_single_file = to_bool(project_cfg.get("allure_single_file"), default=True)
-        allure_cmd = [
-            *(allure_exec or ["allure"]),
+        executable = allure_exec or ["allure"]
+
+        history_report_dir = allure_report
+        if allure_single_file and run_dir:
+            history_report_dir = run_dir / "allure-report-history-cache"
+
+        history_cmd = [
+            *executable,
             "generate",
             str(allure_results),
             "-o",
-            str(allure_report),
+            str(history_report_dir),
             "--clean",
         ]
-        if allure_single_file:
-            allure_cmd.append("--single-file")
-        print(f"[运行] {' '.join(allure_cmd)}")
-        allure_code = run_command(allure_cmd)
-        if allure_code != 0:
+        print(f"[运行] {' '.join(history_cmd)}")
+        history_code = run_command(history_cmd)
+        if history_code != 0:
             print("[报告] Allure 报告生成失败，请检查 Java/Allure 安装。")
-            return allure_code
+            return history_code
+
+        persisted = persist_allure_history(report_root, history_report_dir)
+        if persisted:
+            print(f"[报告] 已更新趋势历史缓存: {report_root / 'allure-history'}")
+
+        if allure_single_file:
+            single_file_cmd = [
+                *executable,
+                "generate",
+                str(allure_results),
+                "-o",
+                str(allure_report),
+                "--clean",
+                "--single-file",
+            ]
+            print(f"[运行] {' '.join(single_file_cmd)}")
+            single_file_code = run_command(single_file_cmd)
+            if single_file_code != 0:
+                print("[报告] Allure 单文件报告生成失败，请检查 Allure CLI 版本。")
+                return single_file_code
+
         print(f"[报告] Allure HTML: {allure_report}")
 
     return pytest_code

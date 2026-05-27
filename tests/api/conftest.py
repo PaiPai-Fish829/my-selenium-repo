@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from my_framework.api_client import ApiClient
+from my_framework.allure_utils import attach_json, attach_text
 from my_framework.base_api_test import BaseApiTest
 
 LOGGER = logging.getLogger("tests.api")
@@ -107,11 +108,14 @@ def api_request_log(request: pytest.FixtureRequest) -> None:
     last_response = client.get_last_response()
     if last_request:
         LOGGER.info("API Request: %s", last_request)
+        attach_json("api-last-request", last_request)
     if last_response:
         LOGGER.info("API Response: %s", last_response)
+        attach_json("api-last-response", last_response)
 
     rep_call = getattr(node, "rep_call", None)
     if rep_call is not None and rep_call.failed:
         LOGGER.error("API test failed: %s", node.nodeid)
         LOGGER.error("Failure request details: %s", last_request)
         LOGGER.error("Failure response details: %s", last_response)
+        attach_text("api-failure-nodeid", node.nodeid)

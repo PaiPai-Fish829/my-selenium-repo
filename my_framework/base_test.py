@@ -9,6 +9,7 @@ import yaml
 from seleniumbase import BaseCase
 from selenium.common.exceptions import NoSuchWindowException, WebDriverException
 
+from my_framework.allure_utils import attach_png, attach_text
 from my_framework.assertions_ui import (
     assert_page_contains,
     assert_page_contains_all,
@@ -109,6 +110,12 @@ class BaseTest(BaseCase):
             self.save_screenshot(name=screenshot_name, folder=str(screenshot_dir))
             saved_path = screenshot_dir / f"{screenshot_name}.png"
             print(f"[截图] 失败截图已保存: {saved_path}")
+            attached = attach_png(saved_path, name=f"{test_name}-failure-screenshot")
+            if attached:
+                try:
+                    attach_text("failure-url", self.get_current_url())
+                except Exception:
+                    pass
             return True
         except (NoSuchWindowException, WebDriverException) as exc:
             print(f"[截图] 保存失败（浏览器不可用）: {exc}")

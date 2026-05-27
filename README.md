@@ -246,6 +246,9 @@ def test_profile(authenticated_api_client):
 
 # 生成 Allure HTML（需要 java + allure 命令可用）
 .\.venv\Scripts\python.exe scripts/run_tests.py tests/api --allure
+
+# 连续执行两次可看到趋势（第二次自动继承上次 history）
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api --allure
 ```
 
 ---
@@ -260,9 +263,13 @@ reports/
     ├── report.xml
     ├── allure-results/
     └── allure-report/
+└── allure-history/          # 趋势缓存（跨运行复用）
 ```
 
 说明：测试报告统一输出到 `reports/<timestamp>/`，仓库根目录不再保留 `last_report.html`。
+Allure 趋势会复用 `reports/allure-history/`，本地与 CI 都按同一机制工作。
+
+完整 Allure 使用说明见：`docs/allure-integration.md`
 
 ---
 
