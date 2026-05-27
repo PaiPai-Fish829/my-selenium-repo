@@ -177,6 +177,66 @@ cases:
 
 ---
 
+## Allure 在参数化中的用法
+
+在参数化测试中，推荐把“固定维度”放在装饰器（`@allure.xxx`），把“随 case 变化的维度”放在运行时（`allure.dynamic.xxx`）。
+
+### 1) 常用装饰器（静态信息）
+
+- `@allure.feature("模块")`：功能模块（一级分类）
+- `@allure.story("子场景")`：场景/用户故事（二级分类）
+- `@allure.epic("业务域")`：更高层业务分组（可选）
+- `@allure.tag("ui", "login")`：标签，便于筛选
+- `@allure.severity(allure.severity_level.CRITICAL)`：严重级别
+- `@allure.title("固定标题")`：固定测试标题（非参数化时常用）
+
+### 2) 常用 dynamic 方法（参数化强相关）
+
+- `allure.dynamic.title(...)`：为每条参数化 case 动态设置标题（最常用）
+- `allure.dynamic.feature(...)` / `allure.dynamic.story(...)`：按 case 动态分类
+- `allure.dynamic.tag(...)`：按 case 动态打标签（如 P0/P1、业务标签）
+- `allure.dynamic.severity(...)`：按 case 动态设置严重级别
+- `allure.dynamic.description(...)`：补充当前 case 的说明
+- `allure.dynamic.link(...)` / `allure.dynamic.issue(...)` / `allure.dynamic.testcase(...)`：关联链接、缺陷、测试用例
+
+### 3) 参数化示例（推荐写法）
+
+```python
+import allure
+import pytest
+from my_framework.shared.yaml_parametrize import yaml_parametrize
+
+PRIORITY_TO_SEVERITY = {
+    "P0": allure.severity_level.BLOCKER,
+    "P1": allure.severity_level.CRITICAL,
+    "P2": allure.severity_level.NORMAL,
+    "P3": allure.severity_level.MINOR,
+}
+
+@pytest.mark.ui
+@allure.feature("ECShop")
+@allure.story("登录")
+@allure.tag("ui", "login")
+@yaml_parametrize("case", "cases", data_file="example/data/scenarios/ecshop_login.yaml", id_key="title")
+def test_login_by_yaml_case(sb, case):
+    # 让每条参数化 case 在报告中直接显示业务标题
+    allure.dynamic.title(case.get("title", "未命名用例"))
+    allure.dynamic.tag(case.get("priority", "P2"))
+    allure.dynamic.severity(
+        PRIORITY_TO_SEVERITY.get(case.get("priority", "P2"), allure.severity_level.NORMAL)
+    )
+    allure.dynamic.description(f"用例ID: {case.get('id', 'unknown_case')}")
+```
+
+### 4) 实战建议
+
+- 参数化场景优先使用 `allure.dynamic.title(case["title"])`，报告可读性最高。
+- `id_key` 决定 pytest/控制台中的参数化名称，`dynamic.title` 决定 Allure 中展示标题；两者可同时使用。
+- 若中文参数 ID 显示为 `\uXXXX`，可在 `pytest.ini` 中启用：
+  `disable_test_id_escaping_and_forfeit_all_rights_to_community_support = True`。
+
+---
+
 ## API 封装说明
 
 ### 1) ApiClient（`my_framework/api/client.py`）
