@@ -301,6 +301,20 @@ def main() -> int:
     print(f"[运行] {' '.join(cmd)}")
     pytest_code = run_command(cmd)
 
+    # pytest exit code 4/5:
+    # 4 = usage error / file not found
+    # 5 = no tests collected
+    # 这两种场景下报告产物没有实际价值，避免误导用户。
+    if pytest_code in {4, 5}:
+        if run_dir and run_dir.exists():
+            shutil.rmtree(run_dir, ignore_errors=True)
+        if pytest_code == 4:
+            print("[报告] pytest 参数或路径错误（exit code=4），已跳过报告生成。")
+        else:
+            print("[报告] 未收集到任何测试用例（exit code=5），已跳过报告生成。")
+        print("[提示] 请检查测试路径、文件名或 -k/-m 筛选条件是否正确。")
+        return pytest_code
+
     if report_enabled and not args.allure_only:
         generate_markdown_from_junit(junit_report, markdown_report)
 
