@@ -1,0 +1,180 @@
+cases:
+  - id: "httpbin_cookie_session_case_1"
+    title: "写入 sessionid Cookie 并验证会话"
+    category: "session-positive"
+    priority: "P0"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/cookies/set/{cookie_name}/{cookie_value}"
+      verify_path: "/cookies"
+      cookie_name: "sessionid"
+      cookie_value: "demo-session-001"
+      set_cookie_params:
+        from: "example"
+      verify_params:
+        check: "session"
+    expected:
+      set_cookie_status_code: 200
+      verify_status_code: 200
+      json_contains:
+        cookies:
+          sessionid: "demo-session-001"
+
+  - id: "httpbin_cookie_session_case_2"
+    title: "写入 trace_id Cookie 并验证会话"
+    category: "session-positive"
+    priority: "P1"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/cookies/set/{cookie_name}/{cookie_value}"
+      verify_path: "/cookies"
+      cookie_name: "trace_id"
+      cookie_value: "trace-20260527"
+      set_cookie_params:
+        from: "example"
+      verify_params:
+        check: "trace"
+    expected:
+      set_cookie_status_code: 200
+      verify_status_code: 200
+      json_contains:
+        cookies:
+          trace_id: "trace-20260527"
+
+  - id: "httpbin_cookie_session_case_3"
+    title: "写入 user_pref Cookie 并验证会话"
+    category: "session-positive"
+    priority: "P1"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/cookies/set/{cookie_name}/{cookie_value}"
+      verify_path: "/cookies"
+      cookie_name: "user_pref"
+      cookie_value: "dark_mode"
+      set_cookie_params:
+        from: "example"
+      verify_params:
+        check: "preference"
+    expected:
+      set_cookie_status_code: 200
+      verify_status_code: 200
+      json_contains:
+        cookies:
+          user_pref: "dark_mode"
+
+  - id: "httpbin_cookie_session_case_4"
+    title: "写入 locale Cookie 并验证会话"
+    category: "session-positive"
+    priority: "P2"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/cookies/set/{cookie_name}/{cookie_value}"
+      verify_path: "/cookies"
+      cookie_name: "locale"
+      cookie_value: "zh_CN"
+      set_cookie_params:
+        from: "example"
+      verify_params:
+        check: "locale"
+    expected:
+      set_cookie_status_code: 200
+      verify_status_code: 200
+      json_contains:
+        cookies:
+          locale: "zh_CN"
+
+  - id: "httpbin_cookie_session_case_5"
+    title: "写入 feature_flag Cookie 并验证会话"
+    category: "session-positive"
+    priority: "P2"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/cookies/set/{cookie_name}/{cookie_value}"
+      verify_path: "/cookies"
+      cookie_name: "feature_flag"
+      cookie_value: "new_checkout"
+      set_cookie_params:
+        from: "example"
+      verify_params:
+        check: "feature"
+    expected:
+      set_cookie_status_code: 200
+      verify_status_code: 200
+      json_contains:
+        cookies:
+          feature_flag: "new_checkout"
+
+  - id: "httpbin_cookie_session_negative_set_404"
+    title: "设置 Cookie 接口返回 404，验证不会产生会话"
+    category: "session-negative"
+    priority: "P1"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/status/404"
+      verify_path: "/cookies"
+      cookie_name: "broken_cookie"
+      cookie_value: "should_not_exist"
+      set_cookie_params:
+        from: "negative"
+      verify_params:
+        check: "negative"
+    expected:
+      set_cookie_status_code: 404
+      verify_status_code: 200
+      assert_cookie_presence: false
+
+  - id: "httpbin_cookie_session_negative_set_anything"
+    title: "调用 /anything 不会设置 Cookie，验证会话为空"
+    category: "session-negative"
+    priority: "P2"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/anything"
+      verify_path: "/cookies"
+      cookie_name: "noop_cookie"
+      cookie_value: "no_effect"
+      set_cookie_params:
+        from: "negative"
+      verify_params:
+        check: "negative-anything"
+    expected:
+      set_cookie_status_code: 200
+      verify_status_code: 200
+      assert_cookie_presence: false
+
+  - id: "httpbin_cookie_session_case_6"
+    title: "写入 build_id Cookie 并验证会话"
+    category: "session-positive"
+    priority: "P3"
+    markers: ["api", "demo"]
+    request:
+      set_cookie_method: "GET"
+      verify_method: "GET"
+      set_cookie_path: "/cookies/set/{cookie_name}/{cookie_value}"
+      verify_path: "/cookies"
+      cookie_name: "build_id"
+      cookie_value: "build-260527"
+      set_cookie_params:
+        from: "example"
+      verify_params:
+        check: "build"
+    expected:
+      set_cookie_status_code: 200
+      verify_status_code: 200
+      json_contains:
+        cookies:
+          build_id: "build-260527"

@@ -53,7 +53,8 @@ my-selenium-repo/
 │   ├── data/
 │   │   └── scenarios/
 │   │       ├── ecshop_login.yaml
-│   │       └── reqres_products.yaml
+│   │       ├── httpbin_session_auth_demo.yaml
+│   │       └── httpbin_token_auth_demo.yaml
 │   ├── pages/
 │   │   ├── base_page.py
 │   │   ├── login_page.py
@@ -61,18 +62,28 @@ my-selenium-repo/
 │   │   ├── shopping_page.py
 │   │   └── shopping_car_page.py
 │   └── tests/
-│       ├── test_ecshop_flow.py
-│       ├── test_ecshop_login_parametrize.py
-│       ├── test_reqres_api_demo.py
-│       └── test_reqres_session_token_demo.py
+│       ├── api/
+│       │   ├── test_httpbin_api_demo.py
+│       │   └── test_httpbin_session_token_demo.py
+│       └── ui/
+│           ├── test_ecshop_flow.py
+│           └── test_ecshop_login_parametrize.py
 ├── my_framework/
-│   ├── api_client.py
-│   ├── assertions_api.py
-│   ├── assertions_ui.py
-│   ├── assertions.py
-│   ├── base_api_test.py
-│   ├── base_test.py
-│   └── yaml_parametrize.py
+│   ├── __init__.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── assertions.py
+│   │   ├── base_test.py
+│   │   └── client.py
+│   ├── shared/
+│   │   ├── __init__.py
+│   │   ├── allure_utils.py
+│   │   ├── config_utils.py
+│   │   └── yaml_parametrize.py
+│   └── ui/
+│       ├── __init__.py
+│       ├── assertions.py
+│       └── base_test.py
 ├── tests/
 │   ├── conftest.py
 │   ├── api/
@@ -90,7 +101,9 @@ my-selenium-repo/
 
 ## 分层与解耦策略
 
-- `my_framework/`：框架能力层（参数化、断言、API 客户端、UI 基类）
+- `my_framework/api/`：API 封装（客户端、API 基类、API 断言）
+- `my_framework/ui/`：UI 封装（UI 基类、UI 断言）
+- `my_framework/shared/`：通用工具（allure、配置读取、yaml 参数化）
 - `tests/`：正式测试入口（API/UI 可长期演进）
 - `example/`：演示工程（可删可换，不影响框架主逻辑）
 - `tests/conftest.py`：全局通用能力（如 `--test-env`）
@@ -127,7 +140,7 @@ API 环境配置的完整字段、优先级与鉴权参数说明见：
 
 ## YAML 参数化
 
-使用 `my_framework/yaml_parametrize.py`：
+使用 `my_framework/shared/yaml_parametrize.py`：
 
 ```python
 @yaml_parametrize("case", "cases", data_file="data/scenarios/api/httpbin_smoke.yaml")
@@ -166,7 +179,7 @@ cases:
 
 ## API 封装说明
 
-### 1) ApiClient（`my_framework/api_client.py`）
+### 1) ApiClient（`my_framework/api/client.py`）
 
 - 使用 `requests.Session` 复用连接与 Cookie
 - 支持 Token / Cookie 鉴权（`auth_mode=token|cookie|both`）
@@ -175,7 +188,7 @@ cases:
 - 提供 `get_last_request()` / `get_last_response()`，供 pytest fixture 记录日志
 - 自动脱敏敏感字段：`password/token/authorization/secret/api_key`（支持嵌套）
 
-### 2) BaseApiTest（`my_framework/base_api_test.py`）
+### 2) BaseApiTest（`my_framework/api/base_test.py`）
 
 - `get_token()`：登录获取 Token，内置缓存与过期前 60 秒自动刷新
 - `login_and_get_session()`：执行登录并返回带 Cookie 的 Session
@@ -203,16 +216,14 @@ def test_profile(authenticated_api_client):
 
 ## 断言拆分
 
-- UI 断言：`my_framework/assertions_ui.py`
+- UI 断言：`my_framework/ui/assertions.py`
   - `assert_page_contains_any(...)`
   - `assert_page_not_contains(...)`
   - `assert_url_contains(...)`
-- API 断言：`my_framework/assertions_api.py`
+- API 断言：`my_framework/api/assertions.py`
   - `assert_status_code(...)`
   - `assert_json_path_equals(...)`
   - `assert_json_contains(...)`
-
-`my_framework/assertions.py` 保留为兼容导出层，避免旧代码立即失效。
 
 ---
 
@@ -225,26 +236,29 @@ def test_profile(authenticated_api_client):
 .\.venv\Scripts\python.exe -m pytest tests/api -v
 
 # 演示 UI
-.\.venv\Scripts\python.exe -m pytest example/tests -v --test-env=demo
+.\.venv\Scripts\python.exe -m pytest example/tests/ui -v --test-env=demo
 
 # 按 marker 运行
 .\.venv\Scripts\python.exe -m pytest tests -m api -v
-.\.venv\Scripts\python.exe -m pytest example/tests -m "ui and demo" -v
+.\.venv\Scripts\python.exe -m pytest example/tests/ui -m "ui and demo" -v
 ```
 
 ### 统一脚本（报告管理）
 
 ```bash
 # 默认：是否产报告由 config.yaml 的 project.report_enabled 控制
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/api -v
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api
 
 # 强制启用 HTML + Markdown
-.\.venv\Scripts\python.exe scripts/run_tests.py tests/api -v --report
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api --report
 
 # 仅导出 Allure 原始数据
 .\.venv\Scripts\python.exe scripts/run_tests.py tests/api --allure-only
 
 # 生成 Allure HTML（需要 java + allure 命令可用）
+.\.venv\Scripts\python.exe scripts/run_tests.py tests/api --allure
+
+# 连续执行两次可看到趋势（第二次自动继承上次 history）
 .\.venv\Scripts\python.exe scripts/run_tests.py tests/api --allure
 ```
 
@@ -260,15 +274,19 @@ reports/
     ├── report.xml
     ├── allure-results/
     └── allure-report/
+└── allure-history/          # 趋势缓存（跨运行复用）
 ```
 
 说明：测试报告统一输出到 `reports/<timestamp>/`，仓库根目录不再保留 `last_report.html`。
+Allure 趋势会复用 `reports/allure-history/`，本地与 CI 都按同一机制工作。
+
+完整 Allure 使用说明见：`docs/allure-integration.md`
 
 ---
 
-## 迁移后的维护建议
+## 当前维护建议
 
-- 正式项目用例写在 `tests/`，演示仅放在 `example/`
-- 新增 API fixture 时优先写入 `tests/api/conftest.py`
-- UI/API 断言不要混用，避免后期维护成本上升
+- 正式项目用例写在 `tests/`，演示与教学代码集中在 `example/`
+- 新增 API fixture 优先写入 `tests/api/conftest.py`
+- UI/API 断言不要混用，保持分层边界清晰
 - 若要引入业务 UI 测试，可新增 `tests/ui/test_*.py`，不影响 `example/`

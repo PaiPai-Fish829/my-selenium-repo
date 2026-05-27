@@ -1,0 +1,141 @@
+cases:
+  - id: "httpbin_bearer_without_token"
+    title: "未携带 Bearer Token 访问 /bearer"
+    category: "auth-negative"
+    priority: "P1"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/bearer"
+      use_auth: false
+      auth_mode: "token"
+      params:
+        source: "demo"
+    expected:
+      status_code: 401
+
+  - id: "httpbin_bearer_with_token"
+    title: "携带 Bearer Token 访问 /bearer"
+    category: "auth-positive"
+    priority: "P0"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/bearer"
+      use_auth: true
+      auth_mode: "token"
+      auth_token: "demo-token-001"
+      params:
+        source: "demo"
+        channel: "token-auth"
+    expected:
+      status_code: 200
+      json_contains:
+        authenticated: true
+        token: "demo-token-001"
+
+  - id: "httpbin_bearer_with_token_p1"
+    title: "携带 P1 级 token 成功访问 /bearer"
+    category: "auth-positive"
+    priority: "P1"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/bearer"
+      use_auth: true
+      auth_mode: "token"
+      auth_token: "token-p1-user"
+      params:
+        source: "demo"
+        role: "operator"
+    expected:
+      status_code: 200
+      json_contains:
+        authenticated: true
+        token: "token-p1-user"
+
+  - id: "httpbin_bearer_with_manual_auth_header"
+    title: "手动传 Authorization 头访问 /bearer"
+    category: "auth-header"
+    priority: "P1"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/bearer"
+      use_auth: false
+      auth_mode: "token"
+      headers:
+        Authorization: "Bearer manual-header-token"
+      params:
+        source: "manual"
+    expected:
+      status_code: 200
+      json_contains:
+        authenticated: true
+        token: "manual-header-token"
+
+  - id: "httpbin_bearer_auth_mode_cookie_should_fail"
+    title: "使用 cookie 模式调用 /bearer（应失败）"
+    category: "auth-negative"
+    priority: "P1"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/bearer"
+      use_auth: true
+      auth_mode: "cookie"
+      auth_token: "token-will-not-be-used"
+      params:
+        source: "negative"
+    expected:
+      status_code: 401
+
+  - id: "httpbin_bearer_token_but_use_auth_false"
+    title: "配置 token 但关闭 use_auth（应失败）"
+    category: "auth-negative"
+    priority: "P2"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/bearer"
+      use_auth: false
+      auth_mode: "token"
+      auth_token: "token-disabled-auth"
+      params:
+        source: "negative"
+    expected:
+      status_code: 401
+
+  - id: "httpbin_anything_with_token_header"
+    title: "携带 token 访问 /anything 并校验参数回显"
+    category: "token-propagation"
+    priority: "P2"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/anything"
+      use_auth: true
+      auth_mode: "token"
+      auth_token: "echo-token-777"
+      params:
+        scene: "header-echo"
+    expected:
+      status_code: 200
+      json_contains:
+        args:
+          scene: "header-echo"
+
+  - id: "httpbin_status_418_teapot"
+    title: "访问 /status/418（错误码场景）"
+    category: "error-code"
+    priority: "P3"
+    markers: ["api", "demo"]
+    request:
+      method: "GET"
+      path: "/status/418"
+      use_auth: false
+      auth_mode: "token"
+      params:
+        source: "error-code"
+    expected:
+      status_code: 418

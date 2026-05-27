@@ -5,39 +5,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
-from seleniumbase import BaseCase
 from selenium.common.exceptions import NoSuchWindowException, WebDriverException
+from seleniumbase import BaseCase
 
-from my_framework.assertions_ui import (
+from my_framework.shared.allure_utils import attach_png, attach_text
+from my_framework.shared.config_utils import DATA_DIR, PROJECT_ROOT, coerce_bool, load_yaml, read_by_path
+from my_framework.ui.assertions import (
     assert_page_contains,
     assert_page_contains_all,
     assert_page_contains_any,
     assert_page_not_contains,
     assert_url_contains,
 )
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT_DIR / "data"
-
-
-def _load_yaml(file_path: Path) -> dict[str, Any]:
-    if not file_path.exists():
-        return {}
-    with file_path.open("r", encoding="utf-8") as file:
-        return yaml.safe_load(file) or {}
-
-
-def _coerce_bool(value: Any, default: bool = True) -> bool:
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return bool(value)
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return default
 
 
 class BaseTest(BaseCase):
@@ -56,34 +35,22 @@ class BaseTest(BaseCase):
     @classmethod
     def _ensure_data_loaded(cls) -> None:
         if cls._config_cache is None:
-            cls._config_cache = _load_yaml(ROOT_DIR / "config.yaml")
+            cls._config_cache = load_yaml(PROJECT_ROOT / "config.yaml")
         if cls._test_data_cache is None:
-            cls._test_data_cache = _load_yaml(DATA_DIR / "test_data.yaml")
+            cls._test_data_cache = load_yaml(DATA_DIR / "test_data.yaml")
 
     def get_config(self, key_path: str | None = None, default: Any = None) -> Any:
-        return self._read_by_path(self._config_cache or {}, key_path, default)
+        return read_by_path(self._config_cache or {}, key_path, default)
 
     def get_test_data(self, key_path: str | None = None, default: Any = None) -> Any:
-        return self._read_by_path(self._test_data_cache or {}, key_path, default)
-
-    @staticmethod
-    def _read_by_path(source: dict[str, Any], key_path: str | None, default: Any) -> Any:
-        if not key_path:
-            return source
-        value: Any = source
-        for key in key_path.split("."):
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                return default
-        return value
+        return read_by_path(self._test_data_cache or {}, key_path, default)
 
     def is_screenshot_on_failure_enabled(self) -> bool:
         """是否开启失败截图（优先读环境变量 SCREENSHOT_ON_FAILURE）。"""
         env_val = os.getenv("SCREENSHOT_ON_FAILURE")
         if env_val is not None:
-            return _coerce_bool(env_val, default=False)
-        return _coerce_bool(
+            return coerce_bool(env_val, default=False)
+        return coerce_bool(
             self.get_config("project.screenshot_on_failure", True),
             default=True,
         )
@@ -92,7 +59,7 @@ class BaseTest(BaseCase):
         rel_dir = self.get_config("project.screenshot_dir", "artifacts/screenshots")
         path = Path(str(rel_dir))
         if not path.is_absolute():
-            path = ROOT_DIR / path
+            path = PROJECT_ROOT / path
         path.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -109,6 +76,12 @@ class BaseTest(BaseCase):
             self.save_screenshot(name=screenshot_name, folder=str(screenshot_dir))
             saved_path = screenshot_dir / f"{screenshot_name}.png"
             print(f"[截图] 失败截图已保存: {saved_path}")
+            attached = attach_png(saved_path, name=f"{test_name}-failure-screenshot")
+            if attached:
+                try:
+                    attach_text("failure-url", self.get_current_url())
+                except Exception:
+                    pass
             return True
         except (NoSuchWindowException, WebDriverException) as exc:
             print(f"[截图] 保存失败（浏览器不可用）: {exc}")
@@ -131,7 +104,6 @@ class BaseTest(BaseCase):
         message: str | None = None,
         check_url: bool = True,
     ) -> None:
-        """断言当前页面包含关键词（match_all=False 为 OR，True 为 AND）。"""
         assert_page_contains(
             self,
             *keywords,

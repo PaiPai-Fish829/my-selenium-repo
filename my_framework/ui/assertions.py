@@ -9,7 +9,6 @@ class BrowserLike(Protocol):
 
 
 def _raise_assertion(message: str) -> None:
-    """直接抛出 AssertionError，避免 assert_true(False) 产生前缀噪音。"""
     raise AssertionError(message)
 
 

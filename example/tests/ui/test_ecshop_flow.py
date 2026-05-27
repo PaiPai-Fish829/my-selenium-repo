@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from example.pages import LoginPage, SearchPage, ShoppingPage, ShoppingCarPage
-from my_framework.base_test import BaseTest
+from my_framework.ui.base_test import BaseTest
 
 
 @pytest.mark.demo

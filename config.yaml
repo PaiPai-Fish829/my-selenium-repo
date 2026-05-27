@@ -6,6 +6,8 @@ project:
   # 测试报告默认开关（true/false）
   report_enabled: false
   report_dir: "reports"
+  # Allure 单文件报告开关（避免本地 file:// 访问资源失败）
+  allure_single_file: true
 
 environments:
   default:
