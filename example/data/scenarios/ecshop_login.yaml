@@ -4,6 +4,7 @@ cases:
     input:
       username: "test"
       password: "123456"
+    priority: "P0"
     expected:
       result: "success"
       contains_any:
@@ -14,6 +15,7 @@ cases:
     input:
       username: "test"
       password: "12345612121"
+    priority: "P0"
     expected:
       result: "fail"
       contains_any:
@@ -24,6 +26,7 @@ cases:
     input:
       username: "test1212"
       password: "123456"
+    priority: "P1"
     expected:
       result: "fail"
       contains_any:

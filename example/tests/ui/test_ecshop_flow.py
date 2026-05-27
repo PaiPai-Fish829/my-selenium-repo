@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import allure
 
 from example.pages import LoginPage, SearchPage, ShoppingPage, ShoppingCarPage
 from my_framework.ui.base_test import BaseTest
@@ -8,6 +9,10 @@ from my_framework.ui.base_test import BaseTest
 
 @pytest.mark.demo
 @pytest.mark.ui
+@allure.feature("ECShop 流程测试")
+@allure.story("搜索商品并加入购物车")
+@allure.tag("ui", "demo", "ecshop", "flow")
+@allure.severity(allure.severity_level.BLOCKER)
 class TestEcshopFlow(BaseTest):
     def test_search_product(self) -> None:
         username = "test"
