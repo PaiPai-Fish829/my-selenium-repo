@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 import yaml
 
-from my_framework.allure_utils import (
+from my_framework.shared.allure_utils import (
     write_categories_json,
     write_environment_properties,
     write_executor_json,

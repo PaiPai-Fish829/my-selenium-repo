@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from my_framework.api_client import ApiClient
-from my_framework.allure_utils import attach_json, attach_text
-from my_framework.base_api_test import BaseApiTest
+from my_framework.api.base_test import BaseApiTest
+from my_framework.api.client import ApiClient
+from my_framework.shared.allure_utils import attach_json, attach_text
 
 LOGGER = logging.getLogger("tests.api")
 _ACTIVE_API_CLIENT_KEY = "_active_api_client"

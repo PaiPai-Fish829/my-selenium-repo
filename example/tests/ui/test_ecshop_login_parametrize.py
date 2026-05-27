@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from example.pages.login_page import LoginPage
-from my_framework.assertions_ui import assert_page_contains_any, assert_page_not_contains
-from my_framework.yaml_parametrize import yaml_parametrize
+from my_framework.ui.assertions import assert_page_contains_any, assert_page_not_contains
+from my_framework.shared.yaml_parametrize import yaml_parametrize
 
 
 @pytest.mark.demo

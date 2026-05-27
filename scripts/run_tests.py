@@ -15,7 +15,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from my_framework.allure_utils import prepare_allure_history, persist_allure_history
+from my_framework.shared.allure_utils import prepare_allure_history, persist_allure_history
 
 def load_config() -> dict:
     config_path = ROOT_DIR / "config.yaml"

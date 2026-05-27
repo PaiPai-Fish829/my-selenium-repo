@@ -4,24 +4,15 @@ import json
 import os
 import platform
 import shutil
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
-def _read_by_path(source: dict[str, Any], key_path: str, default: Any = None) -> Any:
-    value: Any = source
-    for key in key_path.split("."):
-        if isinstance(value, dict) and key in value:
-            value = value[key]
-        else:
-            return default
-    return value
+from my_framework.shared.config_utils import read_by_path
 
 
 def build_environment_map(config: dict[str, Any], test_env: str) -> dict[str, str]:
-    env_cfg = _read_by_path(config, f"environments.{test_env}", {}) or {}
+    env_cfg = read_by_path(config, f"environments.{test_env}", {}) or {}
     project_cfg = config.get("project", {}) if isinstance(config, dict) else {}
     return {
         "PROJECT_NAME": str(project_cfg.get("name", "my-selenium-repo")),
@@ -177,4 +168,3 @@ def attach_png(path: Path, *, name: str = "failure-screenshot") -> bool:
         attachment_type=allure.attachment_type.PNG,
     )
     return True
-

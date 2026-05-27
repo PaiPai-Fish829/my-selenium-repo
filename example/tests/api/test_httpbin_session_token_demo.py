@@ -39,9 +39,9 @@ from typing import Any
 import allure
 import pytest
 
-from my_framework.api_client import ApiClient
-from my_framework.assertions_api import assert_json_contains, assert_status_code
-from my_framework.yaml_parametrize import yaml_parametrize
+from my_framework.api.client import ApiClient
+from my_framework.api.assertions import assert_json_contains, assert_status_code
+from my_framework.shared.yaml_parametrize import yaml_parametrize
 
 PRIORITY_TO_SEVERITY = {
     "P0": allure.severity_level.BLOCKER,

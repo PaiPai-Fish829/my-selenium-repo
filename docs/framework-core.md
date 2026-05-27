@@ -45,7 +45,7 @@
 ### 2.2 使用方式
 
 ```python
-from my_framework.yaml_parametrize import yaml_parametrize
+from my_framework.shared.yaml_parametrize import yaml_parametrize
 
 @yaml_parametrize("case", "cases", data_file="data/scenarios/api/httpbin_smoke.yaml")
 def test_httpbin(case):

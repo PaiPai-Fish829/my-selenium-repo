@@ -60,20 +60,20 @@ class BasePage:
     def assert_page_contains_any(
         self, *keywords: str, message: str | None = None, check_url: bool = True
     ) -> None:
-        from my_framework.assertions_ui import assert_page_contains_any
+        from my_framework.ui.assertions import assert_page_contains_any
 
         assert_page_contains_any(self.sb, *keywords, message=message, check_url=check_url)
 
     def assert_page_not_contains(
         self, *keywords: str, message: str | None = None, check_url: bool = True
     ) -> None:
-        from my_framework.assertions_ui import assert_page_not_contains
+        from my_framework.ui.assertions import assert_page_not_contains
 
         assert_page_not_contains(self.sb, *keywords, message=message, check_url=check_url)
 
     def assert_url_contains(
         self, *fragments: str, match_all: bool = False, message: str | None = None
     ) -> None:
-        from my_framework.assertions_ui import assert_url_contains
+        from my_framework.ui.assertions import assert_url_contains
 
         assert_url_contains(self.sb, *fragments, match_all=match_all, message=message)

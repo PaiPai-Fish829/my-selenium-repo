@@ -3,8 +3,8 @@ from __future__ import annotations
 import allure
 import pytest
 
-from my_framework.assertions_api import assert_json_contains, assert_status_code
-from my_framework.yaml_parametrize import yaml_parametrize
+from my_framework.api.assertions import assert_json_contains, assert_status_code
+from my_framework.shared.yaml_parametrize import yaml_parametrize
 
 
 @pytest.mark.api

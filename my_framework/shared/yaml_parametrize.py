@@ -4,27 +4,16 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_TEST_DATA_FILE = ROOT_DIR / "data" / "test_data.yaml"
+from my_framework.shared.config_utils import PROJECT_ROOT, load_yaml, read_by_path
+
+DEFAULT_TEST_DATA_FILE = PROJECT_ROOT / "data" / "test_data.yaml"
 
 
-def _load_yaml(path: Path) -> dict[str, Any]:
+def _load_yaml_or_raise(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"YAML 文件不存在: {path}")
-    with path.open("r", encoding="utf-8") as file:
-        return yaml.safe_load(file) or {}
-
-
-def _read_by_path(source: dict[str, Any], key_path: str) -> Any:
-    value: Any = source
-    for key in key_path.split("."):
-        if isinstance(value, dict) and key in value:
-            value = value[key]
-        else:
-            raise KeyError(f"YAML 路径不存在: {key_path}")
-    return value
+    return load_yaml(path)
 
 
 def yaml_parametrize(
@@ -41,9 +30,11 @@ def yaml_parametrize(
     @yaml_parametrize("case", "scenarios.login")
     def test_xxx(case): ...
     """
-    yaml_path = ROOT_DIR / data_file
-    content = _load_yaml(yaml_path)
-    cases = _read_by_path(content, key_path)
+    yaml_path = PROJECT_ROOT / data_file
+    content = _load_yaml_or_raise(yaml_path)
+    cases = read_by_path(content, key_path, None)
+    if cases is None:
+        raise KeyError(f"YAML 路径不存在: {key_path}")
     if not isinstance(cases, list):
         raise TypeError(f"{key_path} 必须是列表(list)，当前类型: {type(cases).__name__}")
 
