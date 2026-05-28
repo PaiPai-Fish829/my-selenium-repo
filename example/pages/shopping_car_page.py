@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from example.pages.base_page import BasePage
+from my_framework.ui.base_page import BasePage
 
 
 class ShoppingCarPage(BasePage):
